@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}Gantt — {{ projeto.projeto }}{% endblock %}
+{% block extra_style %}
+<style>
+.gantt-container { overflow-x: auto; }
+.gantt-row { display: flex; align-items: center; border-bottom: 1px solid #f0f5f1; min-height: 44px; }
+.gantt-row:hover { background: #f9fdf9; }
+.gantt-label { min-width: 220px; max-width: 220px; padding: 8px 14px; font-size: 12px; font-weight: 500; color: #333; border-right: 1px solid #eee; }
+.gantt-label .sub { font-size: 11px; color: #999; font-weight: 400; }
+.gantt-label .opt { font-size: 10px; background: #fff3cd; color: #856404; padding: 1px 5px; border-radius: 3px; }
+.gantt-info { min-width: 100px; max-width: 100px; padding: 8px 10px; font-size: 11px; color: #666; border-right: 1px solid #eee; text-align: center; }
+.gantt-bar-area { flex: 1; padding: 8px 0; position: relative; min-width: 300px; }
+.gantt-bar { height: 20px; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 10px; font-weight: 600; color: white; min-width: 4px; white-space: nowrap; overflow: hidden; }
+.gantt-header { display: flex; align-items: center; background: #f4f8f5; border-bottom: 2px solid #dde8e0; font-weight: 600; font-size: 11px; color: #555; }
+.gantt-status { min-width: 90px; max-width: 90px; padding: 8px 10px; font-size: 11px; border-right: 1px solid #eee; text-align: center; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-title">
+    <span class="card-title-left">Gantt — {{ projeto.projeto }}</span>
+    <a href="{{ url_for('ver_projeto', id=projeto.id) }}" class="btn btn-sm btn-secondary">Ver detalhes</a>
+  </div>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;font-size:12px;">
+    <div style="background:#f4f8f5;border-radius:8px;padding:10px 14px;">
+      <span style="color:#888;">Pedido:</span> <strong>{{ projeto.pedido }}</strong>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:10px 14px;">
+      <span style="color:#888;">PCP:</span> <strong>{{ projeto.pcp or '—' }}</strong>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:10px 14px;">
+      <span style="color:#888;">Prev. liberação:</span> <strong style="color:#1F4E3D;">{{ projeto.previsao_liberacao or '—' }}</strong>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:10px 14px;">
+      <span style="color:#888;">Status:</span> <strong>{{ projeto.status }}</strong>
+    </div>
+  </div>
+
+  <!-- Legenda -->
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;font-size:12px;">
+    <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;border-radius:3px;background:#aaa;display:inline-block;"></span>Pendente</span>
+    <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;border-radius:3px;background:#b8860b;display:inline-block;"></span>Em andamento</span>
+    <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;border-radius:3px;background:#e74c3c;display:inline-block;"></span>Pausado</span>
+    <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;border-radius:3px;background:#27ae60;display:inline-block;"></span>Concluído</span>
+    <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;border-radius:3px;background:#1F4E3D;display:inline-block;"></span>Validado</span>
+  </div>
+
+  <div class="gantt-container">
+    <!-- Header -->
+    <div class="gantt-header gantt-row">
+      <div class="gantt-label" style="font-size:11px;">Etapa</div>
+      <div class="gantt-info">Projetista</div>
+      <div class="gantt-info">Previsto</div>
+      <div class="gantt-info">Trabalhado</div>
+      <div class="gantt-info">Paradas</div>
+      <div class="gantt-status">Status</div>
+      <div class="gantt-bar-area" style="padding:8px 14px;">Progresso</div>
+    </div>
+
+    {% for e in etapas %}
+    {% set cor = '#aaa' if e.status=='Pendente' else '#b8860b' if e.status=='Em andamento' else '#e74c3c' if e.status=='Pausado' else '#1F4E3D' if e.validado else '#27ae60' %}
+    {% set pct = 0 %}
+    {% if e.previsao_horas and e.horas_trabalhadas %}
+      {% set pct = [(e.horas_trabalhadas / e.previsao_horas * 100)|int, 100]|min %}
+    {% elif e.status == 'Concluído' %}
+      {% set pct = 100 %}
+    {% endif %}
+    <div class="gantt-row">
+      <div class="gantt-label">
+        {{ e.nome }}
+        {% if e.opcional %}<span class="opt">OPCIONAL</span>{% endif %}
+        {% if e.nome_projetista %}<div class="sub">{{ e.nome_projetista }}</div>{% endif %}
+      </div>
+      <div class="gantt-info">{{ e.nome_projetista or '—' }}</div>
+      <div class="gantt-info">{{ e.previsao_horas or '—' }}{% if e.previsao_horas %}h{% endif %}</div>
+      <div class="gantt-info" style="color:#1F4E3D;font-weight:600;">
+        {{ '%.1f'|format(e.horas_trabalhadas) if e.horas_trabalhadas else '—' }}{% if e.horas_trabalhadas %}h{% endif %}
+      </div>
+      <div class="gantt-info" style="color:#c0392b;">
+        {{ '%.1f'|format(e.horas_paradas) if e.horas_paradas else '0.0' }}h
+      </div>
+      <div class="gantt-status">
+        <span class="badge {% if e.validado %}badge-ok{% elif e.status=='Concluído' %}badge-ok{% elif e.status=='Em andamento' %}badge-pend{% elif e.status=='Pausado' %}badge-danger{% else %}badge-inativo{% endif %}" style="font-size:10px;">
+          {% if e.validado %}Validado{% else %}{{ e.status }}{% endif %}
+        </span>
+      </div>
+      <div class="gantt-bar-area" style="padding:8px 14px;">
+        <div style="background:#eef3ee;border-radius:4px;height:20px;position:relative;overflow:hidden;">
+          <div style="width:{{ pct }}%;height:100%;background:{{ cor }};border-radius:4px;transition:width 0.3s;display:flex;align-items:center;padding:0 6px;">
+            {% if pct > 15 %}<span style="font-size:10px;font-weight:600;color:white;">{{ pct }}%</span>{% endif %}
+          </div>
+        </div>
+        {% if e.previsao_horas and e.horas_trabalhadas and e.horas_trabalhadas > e.previsao_horas %}
+        <div style="font-size:10px;color:#c0392b;margin-top:3px;">
+          +{{ '%.1f'|format(e.horas_trabalhadas - e.previsao_horas) }}h acima do previsto
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div style="margin-top:8px;">
+  <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Voltar ao painel</a>
+</div>
+{% endblock %}

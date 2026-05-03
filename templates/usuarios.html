@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Usuários — TRAEL{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="card-title">Cadastrar novo usuário</div>
+  <form method="POST" action="{{ url_for('novo_usuario') }}">
+    <div class="grid-3">
+      <div class="field">
+        <label>Nome completo <span class="req">*</span></label>
+        <input type="text" name="nome" placeholder="Ex: João Silva" required>
+      </div>
+      <div class="field">
+        <label>Usuário (login) <span class="req">*</span></label>
+        <input type="text" name="usuario" placeholder="Ex: joao.silva" required>
+      </div>
+      <div class="field">
+        <label>Perfil <span class="req">*</span></label>
+        <select name="perfil">
+          <option value="projetista">Projetista</option>
+          <option value="admin">Admin</option>
+          <option value="gestor">Gestor</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:16px;">
+      <button type="submit" class="btn btn-primary">Cadastrar usuário</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-title">Usuários cadastrados</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Usuário</th>
+        <th>Perfil</th>
+        <th>Status</th>
+        <th>Acesso</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in usuarios %}
+      <tr>
+        <td><strong>{{ u.nome }}</strong></td>
+        <td style="font-family:monospace;font-size:12px;color:#555;">{{ u.usuario }}</td>
+        <td>
+          <span class="badge badge-{{ u.perfil }}">{{ u.perfil|title }}</span>
+        </td>
+        <td>
+          {% if u.ativo %}
+            <span class="badge badge-ok">Ativo</span>
+          {% else %}
+            <span class="badge badge-inativo">Inativo</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if u.primeiro_acesso %}
+            <span class="badge badge-pend">Aguardando 1º acesso</span>
+          {% else %}
+            <span class="badge badge-ok">Senha criada</span>
+          {% endif %}
+        </td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap;">
+          <!-- Editar -->
+          <button class="btn btn-sm btn-secondary"
+                  onclick="abrirEditar({{ u.id }}, '{{ u.nome }}', '{{ u.perfil }}', {{ u.ativo }})">
+            Editar
+          </button>
+          <!-- Resetar senha -->
+          <form method="POST" action="{{ url_for('resetar', id=u.id) }}" style="display:inline"
+                onsubmit="return confirm('Resetar senha de {{ u.nome }}?')">
+            <button type="submit" class="btn btn-sm btn-warn">Resetar senha</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal editar -->
+<div id="modal-editar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:14px;padding:28px;width:420px;max-width:95vw;">
+    <div style="font-size:15px;font-weight:600;color:#1F4E3D;margin-bottom:20px;">Editar usuário</div>
+    <form method="POST" id="form-editar">
+      <div class="field" style="margin-bottom:14px;">
+        <label>Nome</label>
+        <input type="text" name="nome" id="edit-nome" required>
+      </div>
+      <div class="field" style="margin-bottom:14px;">
+        <label>Perfil</label>
+        <select name="perfil" id="edit-perfil">
+          <option value="projetista">Projetista</option>
+          <option value="admin">Admin</option>
+          <option value="gestor">Gestor</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:20px;">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px;cursor:pointer;">
+          <input type="checkbox" name="ativo" id="edit-ativo" style="width:16px;height:16px;">
+          Usuário ativo
+        </label>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="fecharEditar()">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function abrirEditar(id, nome, perfil, ativo) {
+  document.getElementById('form-editar').action = `/usuarios/editar/${id}`;
+  document.getElementById('edit-nome').value = nome;
+  document.getElementById('edit-perfil').value = perfil;
+  document.getElementById('edit-ativo').checked = ativo === 1;
+  document.getElementById('modal-editar').style.display = 'flex';
+}
+function fecharEditar() {
+  document.getElementById('modal-editar').style.display = 'none';
+}
+document.getElementById('modal-editar').addEventListener('click', function(e) {
+  if (e.target === this) fecharEditar();
+});
+</script>
+{% endblock %}

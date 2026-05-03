@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Painel — TRAEL{% endblock %}
+{% block content %}
+
+<!-- Alertas de risco (só gestor) -->
+{% if em_risco %}
+<div style="background:#fdf0ee;border:1px solid #f5c6c2;border-radius:12px;padding:16px;margin-bottom:20px;">
+  <div style="font-size:13px;font-weight:600;color:#c0392b;margin-bottom:10px;">⚠ Projetos em risco de atraso</div>
+  {% for p in em_risco %}
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f5c6c2;flex-wrap:wrap;gap:8px;">
+    <div style="font-size:13px;"><strong>{{ p.pedido }}</strong> — {{ p.projeto }} <span style="font-size:11px;color:#888;">· Prev: {{ p.previsao_liberacao }}</span></div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="badge badge-danger" style="font-size:10px;">{% if p.risco=='atrasado' %}ATRASADO{% elif p.risco=='critico' %}CRÍTICO{% else %}ATENÇÃO{% endif %}</span>
+      <a href="{{ url_for('gantt_projeto', id=p.id) }}" class="btn btn-sm btn-secondary">Ver Gantt</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Minhas atividades pendentes -->
+{% if minhas_etapas %}
+<div style="background:#fff8e8;border:1px solid #ffeeba;border-radius:12px;padding:16px;margin-bottom:20px;">
+  <div style="font-size:13px;font-weight:600;color:#856404;margin-bottom:10px;">Suas atividades pendentes</div>
+  {% for e in minhas_etapas %}
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #ffeeba;flex-wrap:wrap;gap:8px;">
+    <div style="font-size:13px;"><strong>{{ e.nome }}</strong> <span style="font-size:11px;color:#888;">· {{ e.pedido }} — {{ e.projeto }}</span></div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="badge badge-pend" style="font-size:10px;">{{ e.status }}</span>
+      <a href="{{ url_for('ver_etapa', id=e.id) }}" class="btn btn-sm btn-primary">{% if e.status=='Pendente' %}Iniciar{% elif e.status=='Pausado' %}Retomar{% else %}Gerenciar{% endif %}</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Cards de resumo -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px;">
+  <div style="background:white;border:1px solid #dde8e0;border-radius:10px;padding:18px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Total de projetos</div>
+    <div style="font-size:26px;font-weight:600;color:#1F4E3D;">{{ projetos|length }}</div>
+  </div>
+  <div style="background:white;border:1px solid #dde8e0;border-radius:10px;padding:18px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Em andamento</div>
+    <div style="font-size:26px;font-weight:600;color:#b8860b;">{{ em_andamento }}</div>
+  </div>
+  <div style="background:white;border:1px solid #dde8e0;border-radius:10px;padding:18px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Concluídos</div>
+    <div style="font-size:26px;font-weight:600;color:#155724;">{{ concluidos }}</div>
+  </div>
+  {% if aguard_validacao %}
+  <div style="background:#fdf0ee;border:1px solid #f5c6c2;border-radius:10px;padding:18px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Aguard. validação</div>
+    <div style="font-size:26px;font-weight:600;color:#c0392b;">{{ aguard_validacao }}</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Lista de projetos -->
+<div class="card">
+  <div class="card-title">
+    <span class="card-title-left">Projetos</span>
+    {% if perfil in ('admin','gestor') %}
+    <a href="{{ url_for('novo_projeto') }}" style="font-size:13px;font-weight:600;background:#1F4E3D;color:white;padding:7px 16px;border-radius:7px;text-decoration:none;">+ Novo projeto</a>
+    {% endif %}
+  </div>
+
+  {% if projetos %}
+  <div style="margin-bottom:14px;">
+    <input type="text" id="busca" placeholder="Buscar por pedido, projeto, PCP..." oninput="filtrar()"
+           style="width:100%;padding:9px 14px;border:1px solid #d5e0d8;border-radius:8px;font-size:13px;font-family:inherit;">
+  </div>
+  <table id="tabela">
+    <thead>
+      <tr>
+        <th>PCP</th><th>Pedido</th><th>Projeto</th><th>Tipo</th>
+        <th>Prev. Liberação</th><th>Progresso</th><th>Status</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in projetos %}
+      <tr data-busca="{{ ((p.pcp or '')~(p.pedido or '')~(p.projeto or ''))|lower }}">
+        <td>{{ p.pcp or '—' }}</td>
+        <td><strong>{{ p.pedido }}</strong></td>
+        <td>{{ p.projeto }}</td>
+        <td><span class="badge" style="background:{% if p.tipo=='Projeto Novo' %}#e8f2ec;color:#1F4E3D{% else %}#e3f2fd;color:#0c447c{% endif %}">{{ p.tipo }}</span></td>
+        <td style="font-size:12px;">{{ p.previsao_liberacao or '—' }}</td>
+        <td style="min-width:120px;">
+          {% if p.total_etapas %}
+            {% set pct = ((p.etapas_concluidas or 0) / p.total_etapas * 100)|int %}
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="flex:1;height:6px;background:#eef3ee;border-radius:3px;overflow:hidden;">
+                <div style="width:{{pct}}%;height:100%;background:#1F4E3D;border-radius:3px;"></div>
+              </div>
+              <span style="font-size:11px;color:#888;">{{pct}}%</span>
+            </div>
+          {% else %}
+            <span style="font-size:12px;color:#aaa;">Sem etapas</span>
+          {% endif %}
+        </td>
+        <td><span class="badge {% if p.status=='Concluído' %}badge-ok{% else %}badge-pend{% endif %}">{{ p.status }}</span></td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap;">
+          <a href="{{ url_for('gantt_projeto', id=p.id) }}" class="btn btn-sm btn-primary">Gantt</a>
+          <a href="{{ url_for('ver_projeto', id=p.id) }}" class="btn btn-sm btn-secondary">Ver</a>
+          {% if perfil in ('admin','gestor') %}
+          <a href="{{ url_for('atribuir_etapas', id=p.id) }}" class="btn btn-sm btn-secondary">Etapas</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align:center;padding:48px;color:#aaa;">
+    <div style="font-size:36px;margin-bottom:12px;">📋</div>
+    Nenhum projeto cadastrado ainda.
+    {% if perfil in ('admin','gestor') %}
+    <br><a href="{{ url_for('novo_projeto') }}" style="color:#1F4E3D;font-weight:600;">Cadastrar o primeiro projeto</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function filtrar() {
+  const q = document.getElementById('busca').value.toLowerCase();
+  document.querySelectorAll('#tabela tbody tr').forEach(tr => {
+    tr.style.display = tr.dataset.busca.includes(q) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

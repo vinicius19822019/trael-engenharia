@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}{{ projeto.projeto }} — TRAEL{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-title" style="justify-content:space-between;">
+    {{ projeto.projeto }}
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="badge" style="background:{% if projeto.tipo=='Projeto Novo' %}#e8f2ec;color:#1F4E3D{% else %}#e3f2fd;color:#0c447c{% endif %}">{{ projeto.tipo }}</span>
+      {% if perfil in ('admin','gestor') %}
+      <a href="{{ url_for('atribuir_etapas', id=projeto.id) }}" class="btn btn-sm btn-secondary">Editar etapas</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px;">
+    <div style="background:#f4f8f5;border-radius:8px;padding:12px 16px;">
+      <div style="font-size:11px;color:#888;margin-bottom:3px;">PCP</div>
+      <div style="font-weight:600;">{{ projeto.pcp or '—' }}</div>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:12px 16px;">
+      <div style="font-size:11px;color:#888;margin-bottom:3px;">Pedido</div>
+      <div style="font-weight:600;">{{ projeto.pedido }}</div>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:12px 16px;">
+      <div style="font-size:11px;color:#888;margin-bottom:3px;">Entrada Vsat</div>
+      <div style="font-weight:600;">{{ projeto.data_vsat or '—' }}</div>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:12px 16px;">
+      <div style="font-size:11px;color:#888;margin-bottom:3px;">Entrada Engenharia</div>
+      <div style="font-weight:600;">{{ projeto.data_engenharia or '—' }}</div>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:12px 16px;">
+      <div style="font-size:11px;color:#888;margin-bottom:3px;">Prev. Liberação</div>
+      <div style="font-weight:600;color:#1F4E3D;">{{ projeto.previsao_liberacao or '—' }}</div>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:12px 16px;">
+      <div style="font-size:11px;color:#888;margin-bottom:3px;">Status</div>
+      <div style="font-weight:600;">{{ projeto.status }}</div>
+    </div>
+  </div>
+
+  <div style="font-size:14px;font-weight:600;color:#1F4E3D;margin-bottom:14px;">Etapas do projeto</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Etapa</th>
+        <th>Projetista</th>
+        <th>Prev. horas</th>
+        <th>Status</th>
+        <th>Validado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in etapas %}
+      {% if e.ativo %}
+      <tr>
+        <td>
+          <span style="font-weight:{% if not e.opcional %}600{% else %}400{% endif %};">{{ e.nome }}</span>
+          {% if e.opcional %}<span style="font-size:10px;background:#fff3cd;color:#856404;padding:1px 7px;border-radius:4px;margin-left:6px;">OPCIONAL</span>{% endif %}
+        </td>
+        <td>{{ e.projetista_nome or '—' }}</td>
+        <td>{{ e.previsao_horas or '—' }}{% if e.previsao_horas %}h{% endif %}</td>
+        <td>
+          <span class="badge {% if e.status=='Concluído' %}badge-ok{% elif e.status=='Em andamento' %}badge-pend{% elif e.status=='Pausado' %}badge-inativo{% else %}badge-inativo{% endif %}">
+            {{ e.status }}
+          </span>
+        </td>
+        <td>
+          {% if e.validado %}
+          <span class="badge badge-ok">Validado</span>
+          {% else %}
+          <span style="font-size:12px;color:#aaa;">Pendente</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div style="margin-top:8px;">
+  <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Voltar ao painel</a>
+</div>
+{% endblock %}

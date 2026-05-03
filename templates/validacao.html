@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Validação — TRAEL{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-title">
+    <span class="card-title-left">Etapas aguardando validação</span>
+    <span class="badge badge-danger">{{ etapas|length }} pendente(s)</span>
+  </div>
+
+  {% if etapas %}
+  {% for e in etapas %}
+  <div style="border:1px solid #dde8e0;border-radius:10px;padding:18px;margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+      <div style="flex:1;">
+        <div style="font-size:12px;color:#888;margin-bottom:4px;">{{ e.pedido }} — {{ e.projeto }} {% if e.pcp %}· PCP {{ e.pcp }}{% endif %}</div>
+        <div style="font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:8px;">{{ e.nome }}</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#666;">
+          <span>Projetista: <strong>{{ e.projetista_nome or '—' }}</strong></span>
+          <span>Previsto: <strong>{{ e.previsao_horas or '—' }}{% if e.previsao_horas %}h{% endif %}</strong></span>
+          <span>Trabalhado: <strong style="color:#1F4E3D;">{{ '%.1f'|format(e.horas_trabalhadas) if e.horas_trabalhadas else '—' }}{% if e.horas_trabalhadas %}h{% endif %}</strong></span>
+          <span>Paradas: <strong style="color:#c0392b;">{{ '%.1f'|format(e.horas_paradas) if e.horas_paradas else '0.0' }}h</strong></span>
+          <span>Concluído em: <strong>{{ e.fim_em[:16] if e.fim_em else '—' }}</strong></span>
+        </div>
+        {% if e.observacao %}
+        <div style="margin-top:8px;font-size:12px;background:#f4f8f5;padding:8px 12px;border-radius:6px;color:#555;">
+          Obs do projetista: {{ e.observacao }}
+        </div>
+        {% endif %}
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;min-width:220px;">
+        <form method="POST" action="{{ url_for('fazer_validacao', id=e.id) }}">
+          <textarea name="observacao" rows="2" placeholder="Observação (opcional)..."
+            style="width:100%;padding:8px;border:1px solid #d5e0d8;border-radius:7px;font-size:12px;font-family:inherit;margin-bottom:8px;resize:none;"></textarea>
+          <div style="display:flex;gap:8px;">
+            <button type="submit" name="acao" value="aprovar" class="btn btn-primary btn-sm" style="flex:1;padding:8px;">
+              Aprovar
+            </button>
+            <button type="submit" name="acao" value="rejeitar" class="btn btn-danger btn-sm" style="flex:1;padding:8px;"
+                    onclick="return confirm('Rejeitar esta etapa? Ela voltará para o projetista.')">
+              Rejeitar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  {% else %}
+  <div style="text-align:center;padding:48px;color:#aaa;">
+    <div style="font-size:36px;margin-bottom:12px;">✓</div>
+    <div style="font-size:15px;font-weight:500;color:#555;">Nenhuma etapa aguardando validação.</div>
+    <div style="font-size:13px;margin-top:6px;">Tudo em dia!</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

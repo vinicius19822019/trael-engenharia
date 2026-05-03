@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}{{ etapa.nome }} — TRAEL{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+    <div>
+      <div style="font-size:12px;color:#888;margin-bottom:4px;">{{ etapa.pedido }} — {{ etapa.projeto }}</div>
+      <div style="font-size:18px;font-weight:600;color:#1F4E3D;">{{ etapa.nome }}</div>
+      {% if etapa.descricao %}
+      <div style="font-size:13px;color:#555;margin-top:6px;line-height:1.6;max-width:600px;">{{ etapa.descricao }}</div>
+      {% endif %}
+    </div>
+    <span class="badge {% if etapa.status=='Concluído' %}badge-ok{% elif etapa.status=='Em andamento' %}badge-pend{% elif etapa.status=='Pausado' %}badge-inativo{% else %}badge-inativo{% endif %}" style="font-size:13px;padding:5px 14px;">
+      {{ etapa.status }}
+    </span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:24px;">
+    <div style="background:#f4f8f5;border-radius:8px;padding:12px;">
+      <div style="font-size:11px;color:#888;margin-bottom:3px;">Previsão</div>
+      <div style="font-weight:600;">{{ etapa.previsao_horas or '—' }}{% if etapa.previsao_horas %}h{% endif %}</div>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:12px;">
+      <div style="font-size:11px;color:#888;margin-bottom:3px;">Início</div>
+      <div style="font-weight:600;font-size:12px;">{{ etapa.inicio_em[:16] if etapa.inicio_em else '—' }}</div>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:12px;">
+      <div style="font-size:11px;color:#888;margin-bottom:3px;">Tempo parado</div>
+      <div style="font-weight:600;color:#c0392b;">{{ '%.1f'|format(etapa.horas_paradas) if etapa.horas_paradas else '0.0' }}h</div>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:12px;">
+      <div style="font-size:11px;color:#888;margin-bottom:3px;">Trabalhado</div>
+      <div style="font-weight:600;color:#1F4E3D;">{{ '%.1f'|format(etapa.horas_trabalhadas) if etapa.horas_trabalhadas else '—' }}{% if etapa.horas_trabalhadas %}h{% endif %}</div>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:12px;">
+      <div style="font-size:11px;color:#888;margin-bottom:3px;">Prev. liberação</div>
+      <div style="font-weight:600;font-size:12px;">{{ etapa.previsao_liberacao or '—' }}</div>
+    </div>
+  </div>
+
+  <!-- Ações -->
+  {% if etapa.status == 'Pendente' %}
+  <form method="POST" action="{{ url_for('iniciar', id=etapa.id) }}">
+    <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;">
+      Iniciar atividade agora
+    </button>
+  </form>
+
+  {% elif etapa.status == 'Em andamento' %}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+    <!-- Pausar -->
+    <div style="background:#fff8f0;border:1px solid #f5c6a0;border-radius:10px;padding:16px;">
+      <div style="font-size:13px;font-weight:600;color:#b8860b;margin-bottom:12px;">Registrar parada</div>
+      <form method="POST" action="{{ url_for('pausar', id=etapa.id) }}">
+        <div class="field" style="margin-bottom:10px;">
+          <label>Motivo <span class="req">*</span></label>
+          <select name="motivo" required style="width:100%;padding:8px 10px;border:1px solid #d5e0d8;border-radius:7px;font-size:13px;font-family:inherit;">
+            <option value="">Selecione...</option>
+            {% for m in motivos %}
+            <option value="{{ m }}">{{ m }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:10px;">
+          <label>Observação (opcional)</label>
+          <input type="text" name="observacao" placeholder="Detalhe se necessário..." style="width:100%;padding:8px 10px;border:1px solid #d5e0d8;border-radius:7px;font-size:13px;font-family:inherit;">
+        </div>
+        <button type="submit" class="btn btn-warn" style="width:100%;">Registrar parada</button>
+      </form>
+    </div>
+
+    <!-- Concluir -->
+    <div style="background:#f0faf4;border:1px solid #a8d5b5;border-radius:10px;padding:16px;">
+      <div style="font-size:13px;font-weight:600;color:#1F4E3D;margin-bottom:12px;">Concluir atividade</div>
+      <form method="POST" action="{{ url_for('concluir', id=etapa.id) }}">
+        <div class="field" style="margin-bottom:10px;">
+          <label>Observação final (opcional)</label>
+          <textarea name="observacao" rows="4" placeholder="Alguma observação sobre a conclusão..."
+            style="width:100%;padding:8px 10px;border:1px solid #d5e0d8;border-radius:7px;font-size:13px;font-family:inherit;resize:vertical;"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;"
+                onclick="return confirm('Confirmar conclusão desta atividade?')">
+          Marcar como concluída
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {% elif etapa.status == 'Pausado' %}
+  <div style="background:#fdf0ee;border:1px solid #f5c6c2;border-radius:10px;padding:16px;margin-bottom:12px;">
+    <div style="font-size:13px;font-weight:600;color:#c0392b;margin-bottom:4px;">Atividade pausada</div>
+    {% if registros %}
+      {% set ultima = registros|selectattr('tipo','eq','parada')|list|last %}
+      {% if ultima %}
+      <div style="font-size:13px;color:#666;">Motivo: <strong>{{ ultima.motivo_parada }}</strong></div>
+      <div style="font-size:12px;color:#999;margin-top:2px;">{{ ultima.registrado_em[:16] }}</div>
+      {% endif %}
+    {% endif %}
+  </div>
+  <form method="POST" action="{{ url_for('retomar', id=etapa.id) }}">
+    <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;">
+      Retomar atividade agora
+    </button>
+  </form>
+
+  {% elif etapa.status == 'Concluído' %}
+  <div style="background:#d4edda;border-radius:10px;padding:16px;text-align:center;color:#155724;">
+    <div style="font-size:22px;margin-bottom:6px;">✓</div>
+    <div style="font-weight:600;">Atividade concluída — aguardando validação</div>
+    {% if etapa.observacao %}
+    <div style="font-size:13px;margin-top:8px;color:#1a5c30;">Obs: {{ etapa.observacao }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Histórico -->
+{% if registros %}
+<div class="card" style="margin-top:16px;">
+  <div class="card-title">Histórico de registros</div>
+  {% for r in registros %}
+  <div style="display:flex;gap:12px;padding:10px 0;border-bottom:0.5px solid #f0f0f0;{% if loop.last %}border-bottom:none;{% endif %}">
+    <div style="min-width:16px;height:16px;border-radius:50%;margin-top:2px;background:
+      {% if r.tipo=='inicio' %}#1F4E3D
+      {% elif r.tipo=='parada' %}#e74c3c
+      {% elif r.tipo=='retomada' %}#f39c12
+      {% else %}#27ae60{% endif %};"></div>
+    <div style="flex:1;">
+      <div style="font-size:13px;font-weight:600;color:#1a1a1a;">
+        {% if r.tipo=='inicio' %}Atividade iniciada
+        {% elif r.tipo=='parada' %}Parada — {{ r.motivo_parada }}
+        {% elif r.tipo=='retomada' %}Atividade retomada
+        {% else %}Atividade concluída{% endif %}
+      </div>
+      {% if r.observacao %}
+      <div style="font-size:12px;color:#666;margin-top:2px;">{{ r.observacao }}</div>
+      {% endif %}
+      <div style="font-size:11px;color:#aaa;margin-top:2px;">{{ r.registrado_em[:16] }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div style="margin-top:12px;">
+  <a href="{{ url_for('minhas_atividades') }}" class="btn btn-secondary">Voltar às atividades</a>
+</div>
+{% endblock %}

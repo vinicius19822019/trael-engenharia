@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Novo Projeto — TRAEL{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-title">Cadastrar novo projeto</div>
+  <form method="POST">
+
+    <div style="font-size:11px;font-weight:700;color:#2d5a3d;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #eef3ee;">Identificação</div>
+    <div class="grid-3" style="margin-bottom:16px;">
+      <div class="field">
+        <label>PCP</label>
+        <input type="text" name="pcp" placeholder="Ex: 7, FEVEREIRO...">
+      </div>
+      <div class="field">
+        <label>Pedido <span class="req">*</span></label>
+        <input type="text" name="pedido" placeholder="Ex: 52741" required>
+      </div>
+      <div class="field">
+        <label>Projeto <span class="req">*</span></label>
+        <input type="text" name="projeto" placeholder="Ex: TPD-409233" required>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div class="field">
+        <label>Descrição do projeto <span class="req">*</span></label>
+        <textarea name="descricao" rows="3" required
+          placeholder="Ex: TRANSFORMADOR 112,5kVA 15kV 3F 380/220V 13800V — descreva as características e observações relevantes do projeto..."
+          style="width:100%;padding:10px 13px;border:1px solid #d5e0d8;border-radius:8px;font-size:13px;font-family:inherit;background:#fafcfa;resize:vertical;transition:border-color 0.15s;"></textarea>
+      </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:#2d5a3d;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #eef3ee;">Tipo</div>
+    <div style="margin-bottom:16px;">
+      <div style="display:flex;gap:16px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:14px 20px;border:1px solid #d5e0d8;border-radius:9px;flex:1;transition:all 0.15s;" id="lbl-novo">
+          <input type="radio" name="tipo" value="Projeto Novo" required onchange="toggleTipo()" style="width:16px;height:16px;accent-color:#1F4E3D;">
+          <div>
+            <div style="font-weight:600;color:#1F4E3D;">Projeto Novo</div>
+            <div style="font-size:12px;color:#888;margin-top:2px;">12 etapas — fluxo completo</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:14px 20px;border:1px solid #d5e0d8;border-radius:9px;flex:1;transition:all 0.15s;" id="lbl-rev">
+          <input type="radio" name="tipo" value="Revisão" onchange="toggleTipo()" style="width:16px;height:16px;accent-color:#1F4E3D;">
+          <div>
+            <div style="font-weight:600;color:#0c447c;">Revisão</div>
+            <div style="font-size:12px;color:#888;margin-top:2px;">4 etapas — revisão de projeto existente</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:#2d5a3d;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #eef3ee;">Datas</div>
+    <div class="grid-3" style="margin-bottom:24px;">
+      <div class="field">
+        <label>Entrada no Vsat <span class="req">*</span></label>
+        <input type="date" name="data_vsat" required>
+      </div>
+      <div class="field">
+        <label>Entrada na Engenharia <span class="req">*</span></label>
+        <input type="date" name="data_engenharia" required>
+      </div>
+      <div class="field">
+        <label>Previsão de liberação <span class="req">*</span></label>
+        <input type="date" name="previsao_liberacao" required>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;padding-top:16px;border-top:1px solid #eef3ee;">
+      <button type="submit" class="btn btn-primary">Salvar e atribuir etapas</button>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function toggleTipo() {
+  document.querySelectorAll('input[name=tipo]').forEach(r => {
+    const lbl = r.parentElement;
+    lbl.style.borderColor = r.checked ? '#1F4E3D' : '#d5e0d8';
+    lbl.style.background  = r.checked ? '#f4f9f6' : 'white';
+  });
+}
+</script>
+{% endblock %}

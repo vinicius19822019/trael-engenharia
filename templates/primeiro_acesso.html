@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Criar senha — TRAEL</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f1; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.card { background: white; border: 1px solid #dde8e0; border-radius: 16px; padding: 40px; width: 100%; max-width: 420px; }
+.topo { text-align: center; margin-bottom: 28px; }
+.icone { width: 52px; height: 52px; background: #e8f2ec; border-radius: 50%; margin: 0 auto 14px; display: flex; align-items: center; justify-content: center; }
+.icone svg { width: 24px; height: 24px; stroke: #1F4E3D; fill: none; stroke-width: 2; stroke-linecap: round; }
+h1 { font-size: 17px; font-weight: 600; color: #1a1a1a; }
+p { font-size: 13px; color: #777; margin-top: 6px; line-height: 1.5; }
+.usuario-box { background: #f4f8f5; border: 1px solid #dde8e0; border-radius: 8px; padding: 10px 14px; font-size: 14px; font-weight: 600; color: #1F4E3D; text-align: center; margin: 16px 0 24px; }
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 11px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.field input { width: 100%; padding: 11px 14px; border: 1px solid #d5e0d8; border-radius: 9px; font-size: 14px; font-family: inherit; background: #fafcfa; transition: border-color 0.15s; }
+.field input:focus { outline: none; border-color: #1F4E3D; background: white; box-shadow: 0 0 0 3px rgba(31,78,61,0.08); }
+.hint { font-size: 11px; color: #aaa; margin-top: 4px; }
+.btn { width: 100%; padding: 12px; background: #1F4E3D; color: white; border: none; border-radius: 9px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; margin-top: 8px; transition: background 0.15s; }
+.btn:hover { background: #173d30; }
+.erro { background: #fdf0ee; color: #c0392b; border: 1px solid #f5c6c2; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="topo">
+    <div class="icone">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <h1>Criar sua senha</h1>
+    <p>Bem-vindo ao TRAEL Engenharia!<br>Defina sua senha para o primeiro acesso.</p>
+  </div>
+
+  <div class="usuario-box">{{ usuario }}</div>
+
+  {% if erro %}
+  <div class="erro">{{ erro }}</div>
+  {% endif %}
+
+  <form method="POST">
+    <div class="field">
+      <label>Nova senha</label>
+      <input type="password" name="senha" placeholder="Mínimo 6 caracteres" autofocus>
+      <div class="hint">Mínimo 6 caracteres. Escolha algo fácil de lembrar.</div>
+    </div>
+    <div class="field">
+      <label>Confirmar senha</label>
+      <input type="password" name="confirma" placeholder="Repita a senha">
+    </div>
+    <button type="submit" class="btn">Criar senha e entrar</button>
+  </form>
+</div>
+</body>
+</html>

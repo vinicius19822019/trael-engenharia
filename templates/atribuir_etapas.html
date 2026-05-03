@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Atribuir Etapas — TRAEL{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-title" style="justify-content:space-between;">
+    Atribuir etapas — {{ projeto.projeto }}
+    <span class="badge" style="background:{% if projeto.tipo=='Projeto Novo' %}#e8f2ec;color:#1F4E3D{% else %}#e3f2fd;color:#0c447c{% endif %}">{{ projeto.tipo }}</span>
+  </div>
+
+  <div style="background:#f4f8f5;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#555;">
+    <strong>Pedido:</strong> {{ projeto.pedido }} &nbsp;|&nbsp;
+    <strong>PCP:</strong> {{ projeto.pcp or '—' }} &nbsp;|&nbsp;
+    <strong>Prev. liberação:</strong> {{ projeto.previsao_liberacao or '—' }}
+  </div>
+
+  <div style="font-size:13px;color:#777;margin-bottom:16px;line-height:1.6;">
+    Para cada etapa: selecione o projetista, informe a previsão em horas e marque se a etapa está ativa.
+    Etapas <span style="background:#fff3cd;color:#856404;padding:1px 8px;border-radius:4px;font-size:11px;font-weight:600;">OPCIONAL</span>
+    só aparecem para o projetista se estiverem ativas.
+  </div>
+
+  <form method="POST">
+    <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:36%;">Etapa</th>
+          <th style="width:26%;">Projetista</th>
+          <th style="width:16%;">Previsão (horas)</th>
+          <th style="width:12%;text-align:center;">Ativa</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for etapa in etapas %}
+        <tr style="{% if etapa.opcional %}background:#fffdf5;{% endif %}">
+          <td>
+            <div style="font-weight:{% if not etapa.opcional %}600{% else %}400{% endif %};color:#1a1a1a;">
+              {{ etapa.nome }}
+            </div>
+            {% if etapa.opcional %}
+            <span style="font-size:10px;background:#fff3cd;color:#856404;padding:1px 7px;border-radius:4px;font-weight:600;">OPCIONAL</span>
+            {% endif %}
+          </td>
+          <td>
+            <select name="projetista_{{ etapa.id }}" style="width:100%;padding:8px 10px;border:1px solid #d5e0d8;border-radius:7px;font-size:13px;font-family:inherit;background:#fafcfa;">
+              <option value="">— Selecione —</option>
+              {% for p in projetistas %}
+              <option value="{{ p.id }}" {% if etapa.projetista_id == p.id %}selected{% endif %}>{{ p.nome }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td>
+            <input type="number" name="horas_{{ etapa.id }}" step="0.5" min="0.5"
+                   value="{{ etapa.previsao_horas or '' }}"
+                   placeholder="Ex: 4.0"
+                   style="width:100%;padding:8px 10px;border:1px solid #d5e0d8;border-radius:7px;font-size:13px;font-family:inherit;background:#fafcfa;">
+          </td>
+          <td style="text-align:center;">
+            <input type="checkbox" name="ativo_{{ etapa.id }}"
+                   {% if etapa.ativo %}checked{% endif %}
+                   style="width:18px;height:18px;accent-color:#1F4E3D;cursor:pointer;">
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:24px;padding-top:16px;border-top:1px solid #eef3ee;">
+      <button type="submit" class="btn btn-primary">Salvar atribuições</button>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Voltar ao painel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

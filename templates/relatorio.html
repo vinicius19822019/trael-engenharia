@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}Relatórios — TRAEL{% endblock %}
+{% block content %}
+
+<!-- Alertas de risco -->
+{% if em_risco %}
+<div style="background:#fdf0ee;border:1px solid #f5c6c2;border-radius:12px;padding:18px;margin-bottom:20px;">
+  <div style="font-size:14px;font-weight:600;color:#c0392b;margin-bottom:12px;">Projetos em risco de atraso</div>
+  {% for p in em_risco %}
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f5c6c2;flex-wrap:wrap;gap:8px;">
+    <div>
+      <strong>{{ p.pedido }}</strong> — {{ p.projeto }}
+      <span style="font-size:12px;color:#888;margin-left:8px;">Prev: {{ p.previsao_liberacao }}</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="badge badge-danger">
+        {% if p.risco=='atrasado' %}ATRASADO{% elif p.risco=='critico' %}CRÍTICO — menos de 3 dias{% else %}ATENÇÃO — menos de 7 dias{% endif %}
+      </span>
+      <a href="{{ url_for('gantt_projeto', id=p.id) }}" class="btn btn-sm btn-secondary">Ver Gantt</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Resumo de projetos -->
+<div class="card">
+  <div class="card-title"><span class="card-title-left">Resumo dos projetos</span></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;">
+    <div style="background:#f4f8f5;border-radius:8px;padding:14px;">
+      <div style="font-size:11px;color:#888;margin-bottom:4px;">Total</div>
+      <div style="font-size:22px;font-weight:600;color:#1F4E3D;">{{ projetos|length }}</div>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:14px;">
+      <div style="font-size:11px;color:#888;margin-bottom:4px;">Em andamento</div>
+      <div style="font-size:22px;font-weight:600;color:#b8860b;">{{ projetos|selectattr('status','eq','Em andamento')|list|length }}</div>
+    </div>
+    <div style="background:#f4f8f5;border-radius:8px;padding:14px;">
+      <div style="font-size:11px;color:#888;margin-bottom:4px;">Concluídos</div>
+      <div style="font-size:22px;font-weight:600;color:#155724;">{{ projetos|selectattr('status','eq','Concluído')|list|length }}</div>
+    </div>
+    <div style="background:#fdf0ee;border-radius:8px;padding:14px;">
+      <div style="font-size:11px;color:#888;margin-bottom:4px;">Em risco</div>
+      <div style="font-size:22px;font-weight:600;color:#c0392b;">{{ em_risco|length }}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Pedido</th><th>Projeto</th><th>Tipo</th><th>Prev. Liberação</th>
+        <th>Progresso</th><th>Status</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in projetos %}
+      <tr>
+        <td><strong>{{ p.pedido }}</strong></td>
+        <td>{{ p.projeto }}</td>
+        <td><span class="badge" style="background:{% if p.tipo=='Projeto Novo' %}#e8f2ec;color:#1F4E3D{% else %}#e3f2fd;color:#0c447c{% endif %}">{{ p.tipo }}</span></td>
+        <td style="font-size:12px;">{{ p.previsao_liberacao or '—' }}</td>
+        <td style="min-width:100px;">
+          {% if p.total_etapas %}
+          {% set pct = ((p.etapas_concluidas or 0) / p.total_etapas * 100)|int %}
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="flex:1;height:6px;background:#eef3ee;border-radius:3px;overflow:hidden;">
+              <div style="width:{{pct}}%;height:100%;background:#1F4E3D;border-radius:3px;"></div>
+            </div>
+            <span style="font-size:11px;color:#888;">{{pct}}%</span>
+          </div>
+          {% endif %}
+        </td>
+        <td><span class="badge {% if p.status=='Concluído' %}badge-ok{% else %}badge-pend{% endif %}">{{ p.status }}</span></td>
+        <td><a href="{{ url_for('gantt_projeto', id=p.id) }}" class="btn btn-sm btn-secondary">Gantt</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Relatório por projetista -->
+<div class="card">
+  <div class="card-title"><span class="card-title-left">Desempenho por projetista</span></div>
+  {% for p in projetistas %}
+  <div style="border:1px solid #dde8e0;border-radius:10px;padding:16px;margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:15px;font-weight:600;color:#1F4E3D;">{{ p.nome }}</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:12px;background:#e8f2ec;color:#1F4E3D;padding:3px 10px;border-radius:6px;">{{ p.total_etapas or 0 }} etapas</span>
+        <span style="font-size:12px;background:#d4edda;color:#155724;padding:3px 10px;border-radius:6px;">{{ p.concluidas or 0 }} concluídas</span>
+        {% if p.andamento %}<span style="font-size:12px;background:#fff3cd;color:#856404;padding:3px 10px;border-radius:6px;">{{ p.andamento }} em andamento</span>{% endif %}
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px;">
+      <div style="background:#f4f8f5;border-radius:7px;padding:10px;">
+        <div style="font-size:10px;color:#888;margin-bottom:2px;">Horas trabalhadas</div>
+        <div style="font-size:18px;font-weight:600;color:#1F4E3D;">{{ p.total_horas or 0 }}h</div>
+      </div>
+      <div style="background:#fdf0ee;border-radius:7px;padding:10px;">
+        <div style="font-size:10px;color:#888;margin-bottom:2px;">Horas paradas</div>
+        <div style="font-size:18px;font-weight:600;color:#c0392b;">{{ p.total_paradas or 0 }}h</div>
+      </div>
+      <div style="background:#f4f8f5;border-radius:7px;padding:10px;">
+        <div style="font-size:10px;color:#888;margin-bottom:2px;">Horas previstas</div>
+        <div style="font-size:18px;font-weight:600;color:#555;">{{ p.total_previsto or 0 }}h</div>
+      </div>
+      {% if p.total_previsto and p.total_horas %}
+      <div style="background:{% if p.total_horas > p.total_previsto %}#fdf0ee{% else %}#e8f2ec{% endif %};border-radius:7px;padding:10px;">
+        <div style="font-size:10px;color:#888;margin-bottom:2px;">Eficiência</div>
+        <div style="font-size:18px;font-weight:600;color:{% if p.total_horas > p.total_previsto %}#c0392b{% else %}#1F4E3D{% endif %};">
+          {{ (p.total_previsto / p.total_horas * 100)|int if p.total_horas else 0 }}%
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if p.paradas_detalhes %}
+    <div style="font-size:11px;color:#888;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Principais motivos de parada</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      {% for parada in p.paradas_detalhes %}
+      <span style="background:#fff3cd;color:#856404;padding:3px 10px;border-radius:99px;font-size:11px;">
+        {{ parada.motivo }} ({{ parada.qtd }}x)
+      </span>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

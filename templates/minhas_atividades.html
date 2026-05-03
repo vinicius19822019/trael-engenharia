@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Minhas Atividades — TRAEL{% endblock %}
+{% block content %}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;">
+  {% set pendentes   = etapas|selectattr('status','eq','Pendente')|list %}
+  {% set andamento   = etapas|selectattr('status','eq','Em andamento')|list %}
+  {% set pausadas    = etapas|selectattr('status','eq','Pausado')|list %}
+  {% set concluidas  = etapas|selectattr('status','eq','Concluído')|list %}
+  <div style="background:white;border:1px solid #dde8e0;border-radius:10px;padding:16px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Pendentes</div>
+    <div style="font-size:24px;font-weight:600;color:#555;">{{ pendentes|length }}</div>
+  </div>
+  <div style="background:white;border:1px solid #dde8e0;border-radius:10px;padding:16px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Em andamento</div>
+    <div style="font-size:24px;font-weight:600;color:#b8860b;">{{ andamento|length }}</div>
+  </div>
+  <div style="background:white;border:1px solid #dde8e0;border-radius:10px;padding:16px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Pausadas</div>
+    <div style="font-size:24px;font-weight:600;color:#c0392b;">{{ pausadas|length }}</div>
+  </div>
+  <div style="background:white;border:1px solid #dde8e0;border-radius:10px;padding:16px;">
+    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Concluídas</div>
+    <div style="font-size:24px;font-weight:600;color:#155724;">{{ concluidas|length }}</div>
+  </div>
+</div>
+
+{% if etapas %}
+  {% for etapa in etapas %}
+  <div style="background:white;border:1px solid {% if etapa.status=='Em andamento' %}#b8860b{% elif etapa.status=='Pausado' %}#e74c3c{% elif etapa.status=='Concluído' %}#27ae60{% else %}#dde8e0{% endif %};border-radius:12px;padding:20px;margin-bottom:14px;border-left-width:4px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;">
+        <div style="font-size:13px;color:#888;margin-bottom:4px;">
+          {{ etapa.pedido }} — {{ etapa.projeto }}
+          {% if etapa.pcp %}<span style="background:#f4f8f5;padding:1px 8px;border-radius:4px;font-size:11px;margin-left:6px;">PCP {{ etapa.pcp }}</span>{% endif %}
+        </div>
+        <div style="font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:6px;">{{ etapa.nome }}</div>
+        {% if etapa.descricao %}
+        <div style="font-size:12px;color:#666;line-height:1.5;margin-bottom:8px;">{{ etapa.descricao }}</div>
+        {% endif %}
+        <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#888;">
+          {% if etapa.previsao_horas %}
+          <span>Previsão: <strong>{{ etapa.previsao_horas }}h</strong></span>
+          {% endif %}
+          {% if etapa.previsao_liberacao %}
+          <span>Liberação: <strong>{{ etapa.previsao_liberacao }}</strong></span>
+          {% endif %}
+          {% if etapa.inicio_em %}
+          <span>Início: <strong>{{ etapa.inicio_em[:16] }}</strong></span>
+          {% endif %}
+          {% if etapa.horas_paradas %}
+          <span style="color:#c0392b;">Paradas: <strong>{{ '%.1f'|format(etapa.horas_paradas) }}h</strong></span>
+          {% endif %}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+        <span class="badge {% if etapa.status=='Concluído' %}badge-ok{% elif etapa.status=='Em andamento' %}badge-pend{% elif etapa.status=='Pausado' %}badge-inativo{% else %}badge-inativo{% endif %}">
+          {{ etapa.status }}
+        </span>
+        <a href="{{ url_for('ver_etapa', id=etapa.id) }}" class="btn btn-sm btn-primary">
+          {% if etapa.status == 'Pendente' %}Iniciar
+          {% elif etapa.status == 'Em andamento' %}Gerenciar
+          {% elif etapa.status == 'Pausado' %}Retomar
+          {% else %}Ver detalhes{% endif %}
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+<div style="text-align:center;padding:60px;color:#aaa;background:white;border-radius:12px;border:1px solid #dde8e0;">
+  <div style="font-size:40px;margin-bottom:14px;">✓</div>
+  <div style="font-size:15px;font-weight:500;color:#555;">Nenhuma atividade atribuída ainda.</div>
+  <div style="font-size:13px;margin-top:6px;">A Kamila atribuirá as atividades assim que os projetos forem cadastrados.</div>
+</div>
+{% endif %}
+{% endblock %}
