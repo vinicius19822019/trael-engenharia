@@ -340,3 +340,6 @@ if __name__ == '__main__':
     print("  Projetistas → criam senha no primeiro acesso\n")
     threading.Thread(target=abrir_navegador, daemon=True).start()
     app.run(host='0.0.0.0', port=5000, debug=False)
+  # Inicializa o banco quando rodando via Gunicorn
+init_db()
+init_projetos_db()
