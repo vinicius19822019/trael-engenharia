@@ -86,6 +86,9 @@ tbody tr:hover td { background: #f9fdf9; }
   {% if session.perfil == 'gestor' %}
   <a href="{{ url_for('relatorio') }}" class="{{ 'active' if request.endpoint == 'relatorio' }}">Relatórios</a>
   {% endif %}
+   {% if session.perfil in ('admin','gestor') %}
+  <a href="{{ url_for('fluxograma') }}" class="{{ 'active' if request.endpoint == 'fluxograma' }}">Fluxograma</a>
+  {% endif %}
 </div>
 {% endif %}
 <div class="container">
