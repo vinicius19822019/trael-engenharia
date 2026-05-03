@@ -1,7 +1,12 @@
 import sqlite3, hashlib, os
 from datetime import datetime
 
-DB_FILE = 'trael.db'
+# No Railway: defina a variável de ambiente DB_PATH para um Volume montado,
+# ex: /data/trael.db  — em desenvolvimento local usa o diretório atual.
+DB_FILE = os.environ.get('DB_PATH', 'trael.db')
+
+# Garante que o diretório existe (importante quando DB_PATH aponta para /data/)
+os.makedirs(os.path.dirname(DB_FILE) if os.path.dirname(DB_FILE) else '.', exist_ok=True)
 
 MOTIVOS_PARADA = [
     # Pausas pessoais
@@ -124,7 +129,6 @@ def init_projetos_db():
         criado_em TEXT DEFAULT CURRENT_TIMESTAMP
     )''')
 
-    # Adicionar coluna descricao se não existir (para bancos já criados)
     try:
         c.execute("ALTER TABLE projetos ADD COLUMN descricao TEXT")
     except:
@@ -162,7 +166,6 @@ def init_projetos_db():
         FOREIGN KEY (etapa_id) REFERENCES etapas_projeto(id)
     )''')
 
-    # Adicionar colunas novas em bancos já existentes
     novas_colunas_etapas = [
         ("inicio_em", "TEXT"),
         ("fim_em", "TEXT"),
@@ -221,7 +224,7 @@ def cadastrar_usuario(nome, usuario, perfil):
         return True, None
     except sqlite3.IntegrityError:
         conn.close()
-        return False, 'Usuário já existe.'
+        return False, f'Usuário "{usuario}" já existe.'
 
 def atualizar_usuario(id, nome, perfil, ativo):
     conn = get_db()
@@ -236,76 +239,79 @@ def resetar_senha(id):
     conn.commit()
     conn.close()
 
-def listar_projetistas():
-    conn = get_db()
-    rows = conn.execute('''SELECT id, nome FROM usuarios
-                           WHERE perfil IN ('projetista','admin','gestor') AND ativo=1
-                           ORDER BY nome''').fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
 # ── Projetos ───────────────────────────────────────────
 
-def cadastrar_projeto(dados, usuario):
+def cadastrar_projeto(dados, criado_por):
     conn = get_db()
     c = conn.cursor()
     c.execute('''INSERT INTO projetos
-        (pcp, pedido, projeto, descricao, tipo, data_vsat, data_engenharia, previsao_liberacao, criado_por)
-        VALUES (?,?,?,?,?,?,?,?,?)''', (
-        dados.get('pcp'), dados.get('pedido'), dados.get('projeto'),
-        dados.get('descricao'), dados.get('tipo'),
-        dados.get('data_vsat'), dados.get('data_engenharia'),
-        dados.get('previsao_liberacao'), usuario
-    ))
-    projeto_id = c.lastrowid
-    etapas = ETAPAS_NOVO if dados.get('tipo') == 'Projeto Novo' else ETAPAS_REVISAO
-    for etapa in etapas:
-        opcional = 1 if etapa in ETAPAS_OPCIONAIS else 0
+                 (pcp, pedido, projeto, descricao, tipo, data_vsat, data_engenharia, previsao_liberacao, criado_por)
+                 VALUES (?,?,?,?,?,?,?,?,?)''',
+              (dados['pcp'], dados['pedido'], dados['projeto'], dados['descricao'],
+               dados['tipo'], dados['data_vsat'], dados['data_engenharia'],
+               dados['previsao_liberacao'], criado_por))
+    pid = c.lastrowid
+
+    etapas = ETAPAS_NOVO if dados['tipo'] == 'Projeto Novo' else ETAPAS_REVISAO
+    for nome in etapas:
+        opcional = 1 if nome in ETAPAS_OPCIONAIS else 0
         c.execute('''INSERT INTO etapas_projeto (projeto_id, nome, opcional, ativo)
-                     VALUES (?,?,?,?)''', (projeto_id, etapa, opcional, 0 if opcional else 1))
+                     VALUES (?,?,?,1)''', (pid, nome, opcional))
+
     conn.commit()
     conn.close()
-    return projeto_id
+    return pid
 
 def listar_projetos():
     conn = get_db()
     rows = conn.execute('''
         SELECT p.*,
                COUNT(CASE WHEN e.ativo=1 THEN 1 END) as total_etapas,
-               SUM(CASE WHEN e.status='Concluído' AND e.ativo=1 THEN 1 ELSE 0 END) as etapas_concluidas,
-               SUM(CASE WHEN e.status='Em andamento' AND e.ativo=1 THEN 1 ELSE 0 END) as etapas_andamento
+               SUM(CASE WHEN e.status='Concluído' AND e.ativo=1 THEN 1 ELSE 0 END) as etapas_concluidas
         FROM projetos p
         LEFT JOIN etapas_projeto e ON e.projeto_id = p.id
         GROUP BY p.id
-        ORDER BY p.criado_em DESC
+        ORDER BY p.id DESC
     ''').fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
-def buscar_projeto(id):
+def buscar_projeto(pid):
     conn = get_db()
-    p = conn.execute("SELECT * FROM projetos WHERE id=?", (id,)).fetchone()
-    etapas = conn.execute('SELECT e.* FROM etapas_projeto e WHERE e.projeto_id=? ORDER BY e.id', (id,)).fetchall()
+    p = conn.execute("SELECT * FROM projetos WHERE id=?", (pid,)).fetchone()
+    etapas = conn.execute('''
+        SELECT e.*, u.nome as projetista_nome
+        FROM etapas_projeto e
+        LEFT JOIN usuarios u ON u.id = e.projetista_id
+        WHERE e.projeto_id=?
+        ORDER BY e.id
+    ''', (pid,)).fetchall()
     conn.close()
-    if not p:
-        return None, []
-    return dict(p), [dict(e) for e in etapas]
+    return (dict(p) if p else None), [dict(e) for e in etapas]
 
-def atribuir_etapa(etapa_id, projetista_id, projetista_nome, previsao_horas, ativo):
+def listar_projetistas():
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT id, nome FROM usuarios WHERE ativo=1 ORDER BY nome"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def atribuir_etapa(etapa_id, projetista_id, projetista_nome, horas, ativo):
     conn = get_db()
     conn.execute('''UPDATE etapas_projeto
                     SET projetista_id=?, projetista_nome=?, previsao_horas=?, ativo=?
-                    WHERE id=?''', (projetista_id, projetista_nome, previsao_horas, ativo, etapa_id))
+                    WHERE id=?''',
+                 (projetista_id, projetista_nome, horas, ativo, etapa_id))
     conn.commit()
     conn.close()
 
-# ── Tela do projetista ─────────────────────────────────
+# ── Atividades do projetista ───────────────────────────
 
 def etapas_do_projetista(usuario_id):
     conn = get_db()
     rows = conn.execute('''
-        SELECT e.*, p.pedido, p.projeto, p.descricao, p.tipo,
-               p.previsao_liberacao, p.pcp, p.id as pid
+        SELECT e.*, p.pedido, p.projeto, p.pcp, p.previsao_liberacao
         FROM etapas_projeto e
         JOIN projetos p ON p.id = e.projeto_id
         WHERE e.projetista_id=? AND e.ativo=1
@@ -339,7 +345,6 @@ def retomar_etapa(etapa_id):
     agora = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     conn = get_db()
 
-    # Calcular tempo da última parada
     ultima_parada = conn.execute('''
         SELECT registrado_em FROM registros_atividade
         WHERE etapa_id=? AND tipo='parada'
@@ -424,7 +429,6 @@ def validar_etapa(etapa_id, aprovado, validado_por, obs=''):
                         WHERE id=?''', (validado_por, agora, etapa_id))
         conn.execute('''INSERT INTO registros_atividade (etapa_id, tipo, observacao, registrado_em)
                         VALUES (?,?,?,?)''', (etapa_id, 'validacao', f'Aprovado por {validado_por}. {obs}', agora))
-        # Verificar se todo o projeto foi concluído e validado
         etapa = conn.execute('SELECT projeto_id FROM etapas_projeto WHERE id=?', (etapa_id,)).fetchone()
         pendentes = conn.execute('''SELECT COUNT(*) as n FROM etapas_projeto
                                     WHERE projeto_id=? AND ativo=1
@@ -500,22 +504,12 @@ def relatorio_projetista():
         result.append(d)
     return result
 
-
 def listar_projetos_fluxograma():
     conn = get_db()
-    projetos = conn.execute("""
-        SELECT * FROM projetos
-        ORDER BY previsao_liberacao ASC, id DESC
-    """).fetchall()
+    projetos = conn.execute("""SELECT * FROM projetos ORDER BY previsao_liberacao ASC, id DESC""").fetchall()
     resultado = []
     for p in projetos:
-        etapas = conn.execute("""
-            SELECT e.*, u.nome as projetista_nome
-            FROM etapas_projeto e
-            LEFT JOIN usuarios u ON u.id = e.projetista_id
-            WHERE e.projeto_id = ?
-            ORDER BY e.id
-        """, (p["id"],)).fetchall()
+        etapas = conn.execute("""SELECT e.*, u.nome as projetista_nome FROM etapas_projeto e LEFT JOIN usuarios u ON u.id = e.projetista_id WHERE e.projeto_id = ? ORDER BY e.id""", (p["id"],)).fetchall()
         d = dict(p)
         d["etapas"] = [dict(e) for e in etapas]
         resultado.append(d)
