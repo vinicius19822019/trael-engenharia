@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
-import os
+import socket, webbrowser, threading
 from database import (init_db, init_projetos_db, autenticar, definir_senha,
                       listar_usuarios, cadastrar_usuario, atualizar_usuario, resetar_senha,
                       cadastrar_projeto, listar_projetos, buscar_projeto,
@@ -8,12 +8,12 @@ from database import (init_db, init_projetos_db, autenticar, definir_senha,
                       retomar_etapa, concluir_etapa, buscar_registros_etapa, buscar_etapa,
                       etapas_para_validar, validar_etapa,
                       projeto_gantt, relatorio_projetista, projetos_em_risco,
+                      listar_projetos_fluxograma,
                       MOTIVOS_PARADA)
 from functools import wraps
 
 app = Flask(__name__)
-# Em produção, defina a variável de ambiente SECRET_KEY no Railway
-app.secret_key = os.environ.get('SECRET_KEY', 'trael-engenharia-2024')
+app.secret_key = 'trael-engenharia-2024'
 
 def login_required(f):
     @wraps(f)
@@ -207,6 +207,15 @@ def relatorio():
                            projetistas=projetistas, projetos=projetos,
                            em_risco=em_risco, nome=session['nome'], perfil=session['perfil'])
 
+# ── Fluxograma ────────────────────────────────────────
+
+@app.route('/fluxograma')
+@admin_required
+def fluxograma():
+    projetos = listar_projetos_fluxograma()
+    return render_template('fluxograma.html', projetos=projetos,
+                           nome=session['nome'], perfil=session['perfil'])
+
 # ── Tela do projetista ─────────────────────────────────
 
 @app.route('/minhas-atividades')
@@ -312,11 +321,22 @@ def resetar(id):
 
 # ── Inicialização ──────────────────────────────────────
 
+def abrir_navegador():
+    import time; time.sleep(1.2)
+    webbrowser.open('http://localhost:5000')
+
 if __name__ == '__main__':
     init_db()
     init_projetos_db()
+    ip = socket.gethostbyname(socket.gethostname())
+    print("\n" + "="*55)
+    print("  TRAEL — Sistema de Gestão de Projetos")
+    print("="*55)
+    print(f"  Este computador: http://localhost:5000")
+    print(f"  Rede interna:    http://{ip}:5000")
+    print("  CTRL+C para encerrar")
+    print("="*55)
+    print("\n  Logins: vinicius / kamila → senha: trael2024")
+    print("  Projetistas → criam senha no primeiro acesso\n")
+    threading.Thread(target=abrir_navegador, daemon=True).start()
     app.run(host='0.0.0.0', port=5000, debug=False)
-
-# Inicializa o banco quando rodando via Gunicorn
-init_db()
-init_projetos_db()
